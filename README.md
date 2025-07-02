@@ -13,3 +13,7 @@ A C# Windows Forms application to manage workers, tasks, and specialties using S
 - .NET Framework
 - SQL Server
 
+  ## Contributors
+- Menna Hekal
+- Hend Waheed
+
