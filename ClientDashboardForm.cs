@@ -108,6 +108,12 @@ namespace DB_Testing
 
         private void button4_Click(object sender, EventArgs e)
         {
+            if (string.IsNullOrEmpty(clientId))
+            {
+                CustomMessageBox.ShowInfo("Client ID is missing. Please log in again.");
+                return;
+            }
+
             DialogResult result = CustomMessageBox.Show("Are you sure you want to delete your account?", "Confirm");
             if (result == DialogResult.Yes)
             {
@@ -126,7 +132,6 @@ namespace DB_Testing
                     SqlCommand cmdExecutions = new SqlCommand(deleteExecutions, conn);
                     cmdExecutions.Parameters.AddWithValue("@clientId", clientId);
                     cmdExecutions.ExecuteNonQuery();
-
 
                     // Delete all related Requests first
                     string deleteRequests = "DELETE FROM Requests WHERE client_id = @clientId";

@@ -12,9 +12,12 @@ namespace DB_Testing
         SqlConnection conn = new SqlConnection(@"Data Source=DESKTOP-4RIBR5F;Initial Catalog=Project7;Integrated Security=True;TrustServerCertificate=True;");
         //SqlConnection conn = new SqlConnection("server=DESKTOP-ND25F3G;database=Project7DataSet;Integrated Security=True");
 
+        private int clientId;
+
         public Form3()
         {
             InitializeComponent();
+            this.clientId = clientId;
             ThemeManager.ApplyTheme(this);
             ApplyTheme();
         }
@@ -47,85 +50,51 @@ namespace DB_Testing
 
         private void btnDelete_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtClientId.Text))
+            DialogResult result = CustomMessageBox.Show("Are you sure you want to delete your account?", "Confirm");
+            if (result == DialogResult.Yes)
             {
-                CustomMessageBox.ShowInfo("Please enter a Client ID before deleting.", "Missing ID");
-                return;
-            }
-
-            DialogResult result = CustomMessageBox.Show(
-                "Are you sure?", "Confirm Deletion"
-            );
-
-
-            if (result != DialogResult.Yes)
-                return;
-
-            SqlCommand sqlCommand = new SqlCommand();
-            sqlCommand.Connection = conn;
-
-            try
-            {
-                conn.Open();
-
-                sqlCommand.CommandText = "SELECT COUNT(*) FROM Clients WHERE client_id = @client_id";
-                sqlCommand.Parameters.Clear();
-                sqlCommand.Parameters.AddWithValue("@client_id", txtClientId.Text);
-
-                int count = (int)sqlCommand.ExecuteScalar();
-                if (count > 0)
+                try
                 {
-                    // Check related child records first
-                    List<string> blockingTables = new List<string>();
+                    conn.Open();
 
-                    // Check Requests
-                    sqlCommand.CommandText = "SELECT COUNT(*) FROM Requests WHERE client_id = @Id";
-                    sqlCommand.Parameters.Clear();
-                    sqlCommand.Parameters.AddWithValue("@Id", txtClientId.Text);
-                    int reqCount = (int)sqlCommand.ExecuteScalar();
-                    if (reqCount > 0) blockingTables.Add("Requests");
+                    // Delete all related ClientPhones first
+                    string deletePhones = "DELETE FROM ClientPhone WHERE clientId = @clientId";
+                    SqlCommand cmdPhones = new SqlCommand(deletePhones, conn);
+                    cmdPhones.Parameters.AddWithValue("@clientId", clientId);
+                    cmdPhones.ExecuteNonQuery();
 
-                    // Check Execution
-                    sqlCommand.CommandText = "SELECT COUNT(*) FROM Execution WHERE clientId = @Id";
-                    sqlCommand.Parameters.Clear();
-                    sqlCommand.Parameters.AddWithValue("@Id", txtClientId.Text);
-                    int exeCount = (int)sqlCommand.ExecuteScalar();
-                    if (exeCount > 0) blockingTables.Add("Execution");
+                    // Delete all related Executions first
+                    string deleteExecutions = "DELETE FROM Execution WHERE clientId = @clientId";
+                    SqlCommand cmdExecutions = new SqlCommand(deleteExecutions, conn);
+                    cmdExecutions.Parameters.AddWithValue("@clientId", clientId);
+                    cmdExecutions.ExecuteNonQuery();
 
-                    
 
-                    // If there are blocking tables, show error and stop
-                    if (blockingTables.Count > 0)
-                    {
-                        string msg = $"Cannot delete this client because related records exist in:\n\n";
-                        foreach (var tbl in blockingTables)
-                            msg += $"- {tbl}\n";
+                    // Delete all related Requests first
+                    string deleteRequests = "DELETE FROM Requests WHERE client_id = @clientId";
+                    SqlCommand cmdRequests = new SqlCommand(deleteRequests, conn);
+                    cmdRequests.Parameters.AddWithValue("@clientId", clientId);
+                    cmdRequests.ExecuteNonQuery();
 
-                        msg += "\nPlease delete these related records first.";
-                        CustomMessageBox.ShowInfo(msg, "Deletion Blocked");
-                        return;
-                    }
+                    // Then delete the Client
+                    string deleteClient = "DELETE FROM Clients WHERE client_id = @clientId";
+                    SqlCommand cmdClient = new SqlCommand(deleteClient, conn);
+                    cmdClient.Parameters.AddWithValue("@clientId", clientId);
+                    cmdClient.ExecuteNonQuery();
 
-                    // If no blocking child records, safe to delete
-                    sqlCommand.CommandText = "DELETE FROM Clients WHERE client_id = @Id";
-                    sqlCommand.Parameters.Clear();
-                    sqlCommand.Parameters.AddWithValue("@Id", txtClientId.Text);
-                    sqlCommand.ExecuteNonQuery();
-
-                    CustomMessageBox.ShowInfo($"Client with ID {txtClientId.Text} deleted successfully.", "Success");
+                    CustomMessageBox.ShowInfo("Account deleted.");
+                    this.Close();
+                    new loginForm().Show();
                 }
-                else
-                    {
-                    CustomMessageBox.ShowInfo("This Client ID does not exist. Please check and try again.", "Invalid ID");
+                catch (Exception ex)
+                {
+                    CustomMessageBox.ShowInfo("Error deleting account: " + ex.Message);
                 }
-            }
-            catch (Exception ex)
-            {
-                CustomMessageBox.ShowInfo("An error occurred: " + ex.Message, "Error");
-            }
-            finally
-            {
-                conn.Close();
+                finally
+                {
+                    conn.Close();
+                }
+
             }
         }
 
@@ -143,6 +112,11 @@ namespace DB_Testing
         }
 
         private void lblInstruction_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void lblTitle_Click(object sender, EventArgs e)
         {
 
         }

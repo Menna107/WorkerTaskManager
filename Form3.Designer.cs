@@ -53,6 +53,7 @@
             this.lblTitle.Size = new System.Drawing.Size(188, 33);
             this.lblTitle.TabIndex = 2;
             this.lblTitle.Text = "Delete Client";
+            this.lblTitle.Click += new System.EventHandler(this.lblTitle_Click);
             // 
             // btnDelete
             // 

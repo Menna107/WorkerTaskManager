@@ -71,31 +71,28 @@ namespace DB_Testing
 
             try
             {
-                conn.Open();
-                SqlCommand cmd = new SqlCommand("SELECT specialtyID, specialtyName FROM Specialties", conn);
-                SqlDataReader reader = cmd.ExecuteReader();
-
-                while (reader.Read())
+                using (SqlConnection connection = new SqlConnection(conn.ConnectionString))
                 {
-                    int id = reader.GetInt32(0);
-                    string name = reader.GetString(1);
+                    connection.Open();
+                    SqlCommand cmd = new SqlCommand("SELECT specialtyID, specialtyName FROM Specialties", connection);
+                    SqlDataReader reader = cmd.ExecuteReader();
 
-                    if (!string.IsNullOrEmpty(name))
+                    while (reader.Read())
                     {
-                        specialtiesFromDb[name] = id;
-                        cmbSpecialty.Items.Add(name);
+                        int id = reader.GetInt32(0);
+                        string name = reader.GetString(1);
+
+                        if (!string.IsNullOrEmpty(name))
+                        {
+                            specialtiesFromDb[name] = id;
+                            cmbSpecialty.Items.Add(name);
+                        }
                     }
                 }
-
-                reader.Close();
             }
             catch (Exception ex)
             {
                 CustomMessageBox.ShowInfo("Error loading specialties: " + ex.Message);
-            }
-            finally
-            {
-                conn.Close();
             }
 
             if (cmbSpecialty.Items.Count > 0)
@@ -108,20 +105,20 @@ namespace DB_Testing
         {
             try
             {
-                conn.Open();
-                SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM Tasks", conn);
-                DataTable table = new DataTable();
-                adapter.Fill(table);
+                using (SqlConnection connection = new SqlConnection(conn.ConnectionString))
+                {
+                    connection.Open();
+                    SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM Tasks", connection);
+                    DataTable table = new DataTable();
+                    adapter.Fill(table);
+                }
             }
             catch (Exception ex)
             {
                 CustomMessageBox.ShowInfo("Error loading data: " + ex.Message);
             }
-            finally
-            {
-                conn.Close();
-            }
         }
+
 
         private void button1_Click(object sender, EventArgs e)
         {
@@ -137,46 +134,52 @@ namespace DB_Testing
                 return;
             }
 
-            SqlCommand sqlCommand = new SqlCommand();
-            sqlCommand.Connection = conn;
-
             try
             {
-                conn.Open();
-
-                sqlCommand.CommandText = "SELECT COUNT(*) FROM Tasks WHERE taskId = @taskId";
-                sqlCommand.Parameters.Clear();
-                sqlCommand.Parameters.AddWithValue("@taskId", Id.Text);
-
-                int count = (int)sqlCommand.ExecuteScalar();
-                if (count > 0)
+                using (SqlConnection connection = new SqlConnection(conn.ConnectionString))
                 {
-                    CustomMessageBox.ShowInfo("This ID already exists. Please enter a different ID.");
-                }
-                else
-                {
-                    string selectedSpecialtyName = cmbSpecialty.SelectedItem.ToString();
-                    int specialtyId = specialtiesFromDb[selectedSpecialtyName];
+                    connection.Open();
 
-                    sqlCommand.CommandText = "INSERT INTO Tasks (taskId, taskName, avgTime, avgFee, specialtyId) " +
-                                             "VALUES (@taskId, @taskName, @avgTime, @avgFee, @specialtyId)";
+                    using (SqlCommand sqlCommand = new SqlCommand())
+                    {
+                        sqlCommand.Connection = connection;
 
-                    sqlCommand.Parameters.Clear();
-                    sqlCommand.Parameters.AddWithValue("@taskId", Id.Text);
-                    sqlCommand.Parameters.AddWithValue("@taskName", FName.Text);
-                    sqlCommand.Parameters.AddWithValue("@avgTime", avgTime);
-                    sqlCommand.Parameters.AddWithValue("@avgFee", avgFee);
-                    sqlCommand.Parameters.AddWithValue("@specialtyId", specialtyId);
+                        sqlCommand.CommandText = "SELECT COUNT(*) FROM Tasks WHERE taskId = @taskId";
+                        sqlCommand.Parameters.Clear();
+                        sqlCommand.Parameters.AddWithValue("@taskId", Id.Text);
 
-                    sqlCommand.ExecuteNonQuery();
-                    CustomMessageBox.ShowInfo("Insertion was successfully completed.");
-                    LoadTasks();
+                        int count = (int)sqlCommand.ExecuteScalar();
+                        if (count > 0)
+                        {
+                            CustomMessageBox.ShowInfo("This ID already exists. Please enter a different ID.");
+                        }
+                        else
+                        {
+                            string selectedSpecialtyName = cmbSpecialty.SelectedItem.ToString();
+                            int specialtyId = specialtiesFromDb[selectedSpecialtyName];
+
+                            sqlCommand.CommandText = "INSERT INTO Tasks (taskId, taskName, avgTime, avgFee, specialtyId) " +
+                                                     "VALUES (@taskId, @taskName, @avgTime, @avgFee, @specialtyId)";
+
+                            sqlCommand.Parameters.Clear();
+                            sqlCommand.Parameters.AddWithValue("@taskId", Id.Text);
+                            sqlCommand.Parameters.AddWithValue("@taskName", FName.Text);
+                            sqlCommand.Parameters.AddWithValue("@avgTime", avgTime);
+                            sqlCommand.Parameters.AddWithValue("@avgFee", avgFee);
+                            sqlCommand.Parameters.AddWithValue("@specialtyId", specialtyId);
+
+                            sqlCommand.ExecuteNonQuery();
+                            CustomMessageBox.ShowInfo("Insertion was successfully completed.");
+                            LoadTasks();
+                        }
+                    }
                 }
             }
             catch (Exception ex)
             {
                 CustomMessageBox.ShowInfo("An error occurred: " + ex.Message);
             }
+
             finally
             {
                 conn.Close();
@@ -199,7 +202,7 @@ namespace DB_Testing
         private void btnBack_Click(object sender, EventArgs e)
         {
             this.Close();
-            new  ClientDashboardForm().Show();
+            new ClientDashboardForm(clientId).Show();
         }
 
         private void label3_Click(object sender, EventArgs e)
